@@ -37,8 +37,8 @@ class _ChatPageState extends State<ChatPage> {
   final List<ChatMessage> _messages = [];
 
   final GeminiApi _geminiApi = GeminiApi();
-  final ChatFirestoreService _chatService = ChatFirestoreService();
   final S3StorageService _s3Service = S3StorageService();
+  late final ChatFirestoreService _chatService;
   final ImagePicker _picker = ImagePicker();
 
   bool _isSending = false;
@@ -55,6 +55,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    _chatService = ChatFirestoreService(s3Service: _s3Service);
     _initConnectivity();
     _connectivitySub = Connectivity()
         .onConnectivityChanged
@@ -186,6 +187,7 @@ class _ChatPageState extends State<ChatPage> {
         uploadedFileUrl = await _s3Service.uploadFile(
           localPath: _pendingFilePath!,
           uid: uid,
+          sessionId: sessionId,
           fileName: _pendingFileName!,
         );
       }
@@ -455,6 +457,7 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
       drawer: ChatDrawer(
+        chatService: _chatService,
         isDarkMode: isDarkMode,
         onProfileTap: () {
           Navigator.pop(context);

@@ -10,6 +10,7 @@ class ChatDrawer extends StatefulWidget {
   final VoidCallback onProfileTap;
   final void Function(String sessionId, String title) onSessionSelected;
   final void Function(String sessionId) onSessionDeleted;
+  final ChatFirestoreService chatService;
 
   const ChatDrawer({
     super.key,
@@ -19,6 +20,7 @@ class ChatDrawer extends StatefulWidget {
     required this.onProfileTap,
     required this.onSessionSelected,
     required this.onSessionDeleted,
+    required this.chatService,
   });
 
   @override
@@ -26,7 +28,7 @@ class ChatDrawer extends StatefulWidget {
 }
 
 class _ChatDrawerState extends State<ChatDrawer> {
-  final ChatFirestoreService _chatService = ChatFirestoreService();
+  ChatFirestoreService get _chatService => widget.chatService;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 

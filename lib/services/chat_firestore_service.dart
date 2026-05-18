@@ -2,10 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/chat_message.dart';
+import 's3_storage_service.dart';
 
 class ChatFirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final S3StorageService _s3Service;
+
+  ChatFirestoreService({required S3StorageService s3Service})
+      : _s3Service = s3Service;
 
   String get _uid {
     final user = _auth.currentUser;
@@ -116,6 +121,8 @@ class ChatFirestoreService {
   }
 
   Future<void> deleteSession(String sessionId) async {
+    await _s3Service.deleteSessionFiles(_uid, sessionId);
+
     final sessionRef = _sessionsCol.doc(sessionId);
     final messagesSnap = await sessionRef.collection('messages').get();
 

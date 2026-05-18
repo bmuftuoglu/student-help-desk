@@ -19,16 +19,28 @@ class S3StorageService {
   Future<String> uploadFile({
     required String localPath,
     required String uid,
+    required String sessionId,
     required String fileName,
   }) async {
-    final objectName = '$uid/${DateTime.now().microsecondsSinceEpoch}_$fileName';
+    final objectName = '$uid/$sessionId/${DateTime.now().microsecondsSinceEpoch}_$fileName';
     await _minio.fPutObject(s3Bucket, objectName, localPath);
     return 'https://$s3Endpoint/$s3Bucket/$objectName';
   }
 
+  Future<void> deleteSessionFiles(String uid, String sessionId) async {
+    final prefix = '$uid/$sessionId/';
+    await for (final chunk in _minio.listObjects(s3Bucket, prefix: prefix, recursive: true)) {
+      for (final obj in chunk.objects) {
+        if (obj.key != null) {
+          await _minio.removeObject(s3Bucket, obj.key!);
+        }
+      }
+    }
+  }
+
   Future<void> deleteFile(String fileUrl) async {
     final uri = Uri.parse(fileUrl);
-    // /proje/{uid}/... → bucket'ı (ilk segment) atla
+    // bucket'ı (ilk segment) atla
     final objectName = uri.pathSegments.skip(1).join('/');
     await _minio.removeObject(s3Bucket, objectName);
   }
