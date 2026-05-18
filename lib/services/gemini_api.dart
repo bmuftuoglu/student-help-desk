@@ -62,8 +62,12 @@ class GeminiApi {
     }
 
     final Map<String, dynamic> data = jsonDecode(response.body);
+    final candidates = data['candidates'] as List?;
+    if (candidates == null || candidates.isEmpty) {
+      throw Exception('Yanıt güvenlik filtresi tarafından engellendi.');
+    }
     try {
-      return data['candidates'][0]['content']['parts'][0]['text'] as String;
+      return candidates[0]['content']['parts'][0]['text'] as String;
     } catch (e) {
       throw Exception('Beklenmeyen yanıt formatı: $e\nBody: ${response.body}');
     }

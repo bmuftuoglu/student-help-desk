@@ -11,6 +11,7 @@ class ChatDrawer extends StatefulWidget {
   final VoidCallback onProfileTap;
   final void Function(String sessionId, String title) onSessionSelected;
   final void Function(String sessionId) onSessionDeleted;
+  final void Function(String sessionId, String newTitle) onSessionRenamed;
   final ChatFirestoreService chatService;
 
   const ChatDrawer({
@@ -21,6 +22,7 @@ class ChatDrawer extends StatefulWidget {
     required this.onProfileTap,
     required this.onSessionSelected,
     required this.onSessionDeleted,
+    required this.onSessionRenamed,
     required this.chatService,
   });
 
@@ -59,6 +61,99 @@ class _ChatDrawerState extends State<ChatDrawer> {
     final parts = name.trim().split(' ');
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts.last[0]).toUpperCase();
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: _isDark ? AppConstants.kDarkSurface : AppConstants.kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Çıkış Yap',
+            style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Hesabından çıkmak istediğine emin misin?',
+          style: TextStyle(fontSize: 14, color: _subText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Vazgeç', style: TextStyle(color: _subText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Çıkış Yap',
+              style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) widget.onLogout();
+  }
+
+  Future<void> _renameSession(String sessionId, String currentTitle) async {
+    final controller = TextEditingController(text: currentTitle);
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: _isDark ? AppConstants.kDarkSurface : AppConstants.kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Sohbeti Yeniden Adlandır',
+            style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(fontSize: 14, color: _text),
+          decoration: InputDecoration(
+            hintText: 'Yeni başlık',
+            hintStyle: TextStyle(color: _subText),
+            filled: true,
+            fillColor: _inputFill,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppConstants.kPrimary, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Vazgeç', style: TextStyle(color: _subText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text(
+              'Kaydet',
+              style: TextStyle(color: AppConstants.kPrimary, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (newTitle == null || newTitle.isEmpty) return;
+    if (!mounted) return;
+    try {
+      await _chatService.updateSessionTitle(sessionId, newTitle);
+      if (mounted) widget.onSessionRenamed(sessionId, newTitle);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Yeniden adlandırılamadı: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -295,6 +390,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
                             }
                           }
                         },
+                        onRename: () => _renameSession(doc.id, title),
                       );
                     },
                   );
@@ -306,7 +402,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
 
             // Çıkış
             InkWell(
-              onTap: widget.onLogout,
+              onTap: _confirmLogout,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
@@ -337,12 +433,14 @@ class _SessionTile extends StatelessWidget {
   final bool isDark;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback onRename;
 
   const _SessionTile({
     required this.title,
     required this.isDark,
     required this.onTap,
     required this.onDelete,
+    required this.onRename,
   });
 
   @override
@@ -370,6 +468,14 @@ class _SessionTile extends StatelessWidget {
                   fontSize: 14,
                   color: isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
                 ),
+              ),
+            ),
+            GestureDetector(
+              onTap: onRename,
+              child: Icon(
+                Icons.edit_outlined,
+                size: 15,
+                color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
@@ -145,39 +146,33 @@ class _MessageBubbleState extends State<MessageBubble>
                         ? const Radius.circular(4)
                         : const Radius.circular(16),
                   ),
-                  child: Image.network(
-                    widget.message.fileUrl!,
+                  child: CachedNetworkImage(
+                    imageUrl: widget.message.fileUrl!,
                     width: 250,
                     height: 250,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        width: 250,
-                        height: 250,
-                        color: Colors.grey[300],
-                        child: const Center(
-                            child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 250,
-                        height: 100,
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.broken_image, size: 40),
-                              SizedBox(height: 4),
-                              Text('Görsel yüklenemedi',
-                                  style: TextStyle(fontSize: 12)),
-                            ],
-                          ),
+                    placeholder: (context, url) => Container(
+                      width: 250,
+                      height: 250,
+                      color: Colors.grey[300],
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 250,
+                      height: 100,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image, size: 40),
+                            SizedBox(height: 4),
+                            Text('Görsel yüklenemedi',
+                                style: TextStyle(fontSize: 12)),
+                          ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
               )
@@ -417,16 +412,13 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
           onInteractionEnd: _onInteractionEnd,
           minScale: 0.5,
           maxScale: 6.0,
-          child: Image.network(
-            widget.url,
+          child: CachedNetworkImage(
+            imageUrl: widget.url,
             fit: BoxFit.contain,
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              );
-            },
-            errorBuilder: (context, error, _) => const Center(
+            placeholder: (context, url) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+            errorWidget: (context, url, error) => const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

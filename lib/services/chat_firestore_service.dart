@@ -120,6 +120,13 @@ class ChatFirestoreService {
     await _sessionsCol.doc(sessionId).update(updateData);
   }
 
+  Future<void> updateSessionTitle(String sessionId, String newTitle) async {
+    await _sessionsCol.doc(sessionId).update({
+      'title': newTitle,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> deleteSession(String sessionId) async {
     await _s3Service.deleteSessionFiles(_uid, sessionId);
 

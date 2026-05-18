@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -167,7 +168,6 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     setState(() => _isSending = true);
-    _messageController.clear();
 
     try {
       if (_currentSessionId == null) {
@@ -203,6 +203,7 @@ class _ChatPageState extends State<ChatPage> {
 
       setState(() {
         _messages.add(userMessage);
+        _messageController.clear();
         _pendingFilePath = null;
         _pendingFileName = null;
         _pendingMimeType = null;
@@ -249,21 +250,27 @@ class _ChatPageState extends State<ChatPage> {
         }
       });
 
-      await _chatService.saveAssistantMessage(
-        sessionId: sessionId,
-        message: aiMessage,
-      );
-
-      await _chatService.updateSessionSummary(
-        sessionId: sessionId,
-        lastUserPrompt: text,
-        lastAiResponse: reply,
-        titleOverride: titleOverride,
-      );
-
-      if (_currentSessionTitle == 'Yeni sohbet' && titleOverride != null) {
-        if (!mounted) return;
-        setState(() => _currentSessionTitle = titleOverride!);
+      try {
+        await _chatService.saveAssistantMessage(
+          sessionId: sessionId,
+          message: aiMessage,
+        );
+        await _chatService.updateSessionSummary(
+          sessionId: sessionId,
+          lastUserPrompt: text,
+          lastAiResponse: reply,
+          titleOverride: titleOverride,
+        );
+        if (_currentSessionTitle == 'Yeni sohbet' && titleOverride != null) {
+          if (!mounted) return;
+          setState(() => _currentSessionTitle = titleOverride!);
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Yanıt kaydedilemedi.')),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -355,6 +362,12 @@ class _ChatPageState extends State<ChatPage> {
         imageQuality: 80,
       );
       if (picked == null) return;
+      if (File(picked.path).lengthSync() > 20 * 1024 * 1024) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Görsel 20MB\'dan büyük olamaz.')),
+        );
+        return;
+      }
       final mime = lookupMimeType(picked.path) ?? 'image/jpeg';
       if (mounted) {
         setState(() {
@@ -377,6 +390,12 @@ class _ChatPageState extends State<ChatPage> {
         imageQuality: 80,
       );
       if (picked == null) return;
+      if (File(picked.path).lengthSync() > 20 * 1024 * 1024) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Görsel 20MB\'dan büyük olamaz.')),
+        );
+        return;
+      }
       final mime = lookupMimeType(picked.path) ?? 'image/jpeg';
       if (mounted) {
         setState(() {
@@ -402,6 +421,12 @@ class _ChatPageState extends State<ChatPage> {
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
       if (file.path == null) return;
+      if (File(file.path!).lengthSync() > 20 * 1024 * 1024) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Dosya 20MB\'dan büyük olamaz.')),
+        );
+        return;
+      }
       final mime = lookupMimeType(file.path!) ?? 'application/octet-stream';
       if (mounted) {
         setState(() {
@@ -532,6 +557,11 @@ class _ChatPageState extends State<ChatPage> {
               _pendingMimeType = null;
               _messageController.clear();
             });
+          }
+        },
+        onSessionRenamed: (sessionId, newTitle) {
+          if (_currentSessionId == sessionId) {
+            setState(() => _currentSessionTitle = newTitle);
           }
         },
       ),

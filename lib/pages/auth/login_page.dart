@@ -39,6 +39,13 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Geçerli bir e-posta adresi girin')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       await _authService.signInWithEmail(
