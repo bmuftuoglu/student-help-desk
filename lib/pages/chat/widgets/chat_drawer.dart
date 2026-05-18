@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../constants/app_constants.dart';
 import '../../../services/chat_firestore_service.dart';
 
 class ChatDrawer extends StatefulWidget {
@@ -32,6 +33,13 @@ class _ChatDrawerState extends State<ChatDrawer> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  bool get _isDark => widget.isDarkMode;
+  Color get _bg => _isDark ? AppConstants.kDarkSurface : AppConstants.kSurface;
+  Color get _text => _isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary;
+  Color get _subText => _isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary;
+  Color get _border => _isDark ? AppConstants.kDarkBorder : AppConstants.kBorder;
+  Color get _inputFill => _isDark ? AppConstants.kDarkBackground : AppConstants.kInputFill;
+
   @override
   void initState() {
     super.initState();
@@ -55,42 +63,48 @@ class _ChatDrawerState extends State<ChatDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.isDarkMode ? Colors.black : Colors.white;
-    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
-
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName ?? '';
     final email = user?.email ?? '';
     final initials = _getInitials(displayName);
 
     return Drawer(
-      backgroundColor: bgColor,
+      backgroundColor: _bg,
+      width: MediaQuery.of(context).size.width * 0.82,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Kullanıcı profil alanı
+            // Profil bölümü
             InkWell(
               onTap: widget.onProfileTap,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: widget.isDarkMode
-                          ? Colors.grey[800]
-                          : Colors.grey[300],
-                      child: Text(
-                        initials,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4361EE), Color(0xFF738BFF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,107 +112,115 @@ class _ChatDrawerState extends State<ChatDrawer> {
                           Text(
                             displayName.isNotEmpty ? displayName : 'Kullanıcı',
                             style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _text,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 2),
                           Text(
                             email,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: textColor.withValues(alpha: 0.6),
-                            ),
+                            style: TextStyle(fontSize: 12, color: _subText),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: textColor.withValues(alpha: 0.5),
-                    ),
+                    Icon(Icons.edit_outlined, size: 16, color: _subText),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 8),
+            Divider(color: _border, height: 1),
+            const SizedBox(height: 12),
 
-            // Arama kutusu + Yeni sohbet butonu
+            // Arama + Yeni Sohbet
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(color: textColor),
-                      decoration: InputDecoration(
-                        hintText: 'Sohbetlerde ara',
-                        hintStyle:
-                            TextStyle(color: textColor.withValues(alpha: 0.6)),
-                        filled: true,
-                        fillColor: widget.isDarkMode
-                            ? const Color.fromARGB(57, 35, 35, 35)
-                            : Colors.grey[200],
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                    child: Container(
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: _inputFill,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _border),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        style: TextStyle(fontSize: 13, color: _text),
+                        decoration: InputDecoration(
+                          hintText: 'Sohbetlerde ara',
+                          hintStyle: TextStyle(fontSize: 13, color: _subText),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: _subText),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          isDense: true,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  InkWell(
+                  GestureDetector(
                     onTap: widget.onNewChat,
-                    borderRadius: BorderRadius.circular(24),
                     child: Container(
-                      width: 42,
-                      height: 42,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: widget.isDarkMode
-                            ? const Color.fromARGB(57, 35, 35, 35)
-                            : Colors.grey[300],
+                        color: AppConstants.kPrimary,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child:
-                          Icon(Icons.add, color: textColor, size: 22),
+                      child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Sohbetler',
+                'SOHBETLER',
                 style: TextStyle(
-                  color: textColor.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: _subText,
                 ),
               ),
             ),
+            const SizedBox(height: 6),
 
+            // Sohbet listesi
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: _chatService.sessionsStream(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppConstants.kPrimary,
+                      ),
+                    );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return Center(
-                      child: Text(
-                        'Henüz sohbet yok',
-                        style: TextStyle(color: textColor.withValues(alpha: 0.6)),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded,
+                              size: 36, color: _subText),
+                          const SizedBox(height: 8),
+                          Text('Henüz sohbet yok',
+                              style: TextStyle(fontSize: 13, color: _subText)),
+                        ],
                       ),
                     );
                   }
@@ -214,47 +236,47 @@ class _ChatDrawerState extends State<ChatDrawer> {
 
                   if (docs.isEmpty) {
                     return Center(
-                      child: Text(
-                        'Eşleşen sohbet yok',
-                        style: TextStyle(color: textColor.withValues(alpha: 0.6)),
-                      ),
+                      child: Text('Eşleşen sohbet yok',
+                          style: TextStyle(fontSize: 13, color: _subText)),
                     );
                   }
 
                   return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final doc = docs[index];
-                      final title =
-                          doc['title'] as String? ?? 'Başlıksız sohbet';
+                      final title = doc['title'] as String? ?? 'Başlıksız sohbet';
 
-                      return ListTile(
-                        leading: const Icon(Icons.chat_bubble_outline),
-                        title: Text(title, overflow: TextOverflow.ellipsis),
-                        textColor: textColor,
-                        iconColor: textColor,
-                        onTap: () =>
-                            widget.onSessionSelected(doc.id, title),
-                        onLongPress: () async {
+                      return _SessionTile(
+                        title: title,
+                        isDark: _isDark,
+                        onTap: () => widget.onSessionSelected(doc.id, title),
+                        onDelete: () async {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (_) => AlertDialog(
-                              title: const Text('Sohbeti Sil'),
+                              backgroundColor:
+                                  _isDark ? AppConstants.kDarkSurface : AppConstants.kSurface,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              title: Text('Sohbeti Sil',
+                                  style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
                               content: Text(
                                 '"$title" sohbetini silmek istediğine emin misin?',
+                                style: TextStyle(fontSize: 14, color: _subText),
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('Vazgeç'),
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: Text('Vazgeç', style: TextStyle(color: _subText)),
                                 ),
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, true),
+                                  onPressed: () => Navigator.pop(context, true),
                                   child: const Text('Sil',
-                                      style:
-                                          TextStyle(color: Colors.red)),
+                                      style: TextStyle(
+                                          color: Color(0xFFEF4444),
+                                          fontWeight: FontWeight.w600)),
                                 ),
                               ],
                             ),
@@ -267,9 +289,7 @@ class _ChatDrawerState extends State<ChatDrawer> {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Sohbet silinemedi: $e'),
-                                  ),
+                                  SnackBar(content: Text('Sohbet silinemedi: $e')),
                                 );
                               }
                             }
@@ -282,14 +302,75 @@ class _ChatDrawerState extends State<ChatDrawer> {
               ),
             ),
 
-            const Divider(height: 1),
+            Divider(color: _border, height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Çıkış yap'),
-              textColor: textColor,
-              iconColor: textColor,
+            // Çıkış
+            InkWell(
               onTap: widget.onLogout,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, size: 18, color: const Color(0xFFEF4444)),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Çıkış Yap',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionTile extends StatelessWidget {
+  final String title;
+  final bool isDark;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _SessionTile({
+    required this.title,
+    required this.isDark,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onDelete,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              Icons.chat_bubble_outline_rounded,
+              size: 16,
+              color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
+                ),
+              ),
             ),
           ],
         ),

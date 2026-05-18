@@ -74,240 +74,246 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? AppConstants.kDarkBackground : AppConstants.kBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 60),
-                Text(
-                  'Giriş Yap',
-                  style: Theme.of(context).textTheme.headlineLarge,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 52),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppConstants.kPrimary,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Hesabınıza giriş yapın',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color:
-                            isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
+                child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(height: 24),
+              Text('Tekrar hoş geldin!',
+                  style: Theme.of(context).textTheme.headlineLarge),
+              const SizedBox(height: 6),
+              Text(
+                'Hesabınıza giriş yapın',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
                 ),
-                const SizedBox(height: 48),
-                Text(
-                  'E-posta',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black),
-                  decoration: _inputDecoration(
-                    hint: 'ornek@email.com',
-                    isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 40),
+              _label('E-posta'),
+              const SizedBox(height: 8),
+              _field(
+                controller: _emailController,
+                hint: 'ornek@email.com',
+                keyboardType: TextInputType.emailAddress,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 20),
+              _label('Şifre'),
+              const SizedBox(height: 8),
+              _field(
+                controller: _passwordController,
+                hint: '••••••••',
+                obscureText: _obscurePassword,
+                isDark: isDark,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                    color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
                   ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Şifre',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black),
-                  decoration: _inputDecoration(
-                    hint: '••••••••',
-                    isDarkMode: isDarkMode,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: widget.onForgotPasswordTap,
-                    child: Text(
-                      'Şifremi Unuttum?',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppConstants.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: widget.onForgotPasswordTap,
+                  child: const Text(
+                    'Şifremi Unuttum?',
+                    style: TextStyle(
+                      color: AppConstants.kPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                _primaryButton(
-                  label: 'Giriş Yap',
-                  onPressed: _handleLogin,
-                  isLoading: _isLoading,
-                  context: context,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                        child: Divider(
-                            color: isDarkMode
-                                ? Colors.grey[700]
-                                : Colors.grey[300])),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'veya',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                        child: Divider(
-                            color: isDarkMode
-                                ? Colors.grey[700]
-                                : Colors.grey[300])),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(
-                          color: isDarkMode
-                              ? Colors.grey[600]!
-                              : Colors.grey[300]!),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('🔍', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Google ile Giriş Yap',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: isDarkMode ? Colors.white : Colors.black,
-                              ),
-                        ),
-                      ],
+              ),
+              const SizedBox(height: 28),
+              _primaryBtn(label: 'Giriş Yap', onTap: _handleLogin),
+              const SizedBox(height: 24),
+              _orDivider(isDark),
+              const SizedBox(height: 24),
+              _googleBtn(isDark),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Hesabınız yok mu?  ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Henüz hesabınız yok mu? ',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                    GestureDetector(
-                      onTap: widget.onRegisterTap,
-                      child: Text(
-                        'Kayıt Ol',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppConstants.primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  GestureDetector(
+                    onTap: widget.onRegisterTap,
+                    child: const Text(
+                      'Kayıt Ol',
+                      style: TextStyle(
+                        color: AppConstants.kPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+            ],
           ),
         ),
       ),
     );
   }
 
-  InputDecoration _inputDecoration({
+  Widget _label(String text) => Text(
+        text,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      );
+
+  Widget _field({
+    required TextEditingController controller,
     required String hint,
-    required bool isDarkMode,
-    Widget? suffixIcon,
+    required bool isDark,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffix,
   }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-          color: isDarkMode ? Colors.grey[600] : Colors.grey[400]),
-      filled: true,
-      fillColor: isDarkMode
-          ? const Color.fromARGB(57, 35, 35, 35)
-          : Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      style: TextStyle(
+        fontSize: 15,
+        color: isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      suffixIcon: suffixIcon,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          fontSize: 15,
+          color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
+        ),
+        filled: true,
+        fillColor: isDark ? AppConstants.kDarkInputFill : AppConstants.kInputFill,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? AppConstants.kDarkBorder : AppConstants.kBorder,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppConstants.kPrimary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        suffixIcon: suffix,
+      ),
     );
   }
 
-  Widget _primaryButton({
-    required String label,
-    required VoidCallback onPressed,
-    required bool isLoading,
-    required BuildContext context,
-  }) {
+  Widget _primaryBtn({required String label, required VoidCallback onTap}) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: _isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppConstants.primaryColor,
-          disabledBackgroundColor: Colors.grey[400],
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: AppConstants.kPrimary,
+          disabledBackgroundColor: AppConstants.kPrimary.withValues(alpha: 0.5),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: isLoading
+        child: _isLoading
             ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
             : Text(
                 label,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
+      ),
+    );
+  }
+
+  Widget _orDivider(bool isDark) {
+    final c = isDark ? AppConstants.kDarkBorder : AppConstants.kBorder;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: c)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'veya',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: c)),
+      ],
+    );
+  }
+
+  Widget _googleBtn(bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: _isLoading ? null : _handleGoogleSignIn,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: BorderSide(
+            color: isDark ? AppConstants.kDarkBorder : AppConstants.kBorder,
+          ),
+          backgroundColor: isDark ? AppConstants.kDarkSurface : AppConstants.kSurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🔍', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Text(
+              'Google ile Giriş Yap',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -423,34 +423,80 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
+  Widget _buildEmptyState(bool isDark) {
+    final name = FirebaseAuth.instance.currentUser?.displayName?.split(' ').first ?? '';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppConstants.kPrimaryLight,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(Icons.school_rounded, color: AppConstants.kPrimary, size: 38),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              name.isNotEmpty ? 'Merhaba, $name!' : 'Merhaba!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Size nasıl yardımcı olabilirim?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      backgroundColor: isDarkMode ? AppConstants.kDarkBackground : AppConstants.kBackground,
       appBar: AppBar(
         toolbarHeight: AppConstants.appBarHeight,
-        title: const Text(
-          'AI Study Assistant',
-          style: TextStyle(fontSize: AppConstants.appBarFontSize),
-        ),
+        title: const Text('AI Study Assistant'),
         titleSpacing: 0,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: isDarkMode ? Colors.black : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : Colors.black,
+        backgroundColor: isDarkMode ? AppConstants.kDarkBackground : AppConstants.kSurface,
+        foregroundColor: isDarkMode ? AppConstants.kDarkTextPrimary : AppConstants.kTextPrimary,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: isDarkMode ? AppConstants.kDarkBorder : AppConstants.kBorder,
+          ),
+        ),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.sort_rounded),
+            icon: const Icon(Icons.menu_rounded),
             onPressed: () => Scaffold.of(context).openDrawer(),
             tooltip: 'Sohbet geçmişi',
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            icon: Icon(isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
             onPressed: widget.onThemeToggle,
             tooltip: 'Tema değiştir',
           ),
@@ -494,23 +540,23 @@ class _ChatPageState extends State<ChatPage> {
           if (_isOffline)
             Container(
               width: double.infinity,
-              color: Colors.red[700],
-              padding:
-                  const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+              color: const Color(0xFFF97316),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                  Icon(Icons.wifi_off_rounded, color: Colors.white, size: 15),
                   SizedBox(width: 8),
                   Text(
                     'İnternet bağlantısı yok',
-                    style: TextStyle(color: Colors.white, fontSize: 13),
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
             ),
           Expanded(
             child: _messages.isEmpty
-                ? const SizedBox.shrink()
+                ? _buildEmptyState(isDarkMode)
                 : ListView.builder(
                     reverse: true,
                     itemCount: _messages.length,

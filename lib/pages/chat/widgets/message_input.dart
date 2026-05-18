@@ -86,9 +86,16 @@ class _MessageInputState extends State<MessageInput>
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.defaultPadding,
-        vertical: 6,
+        vertical: 8,
       ),
-      color: isDarkMode ? Colors.black : Colors.white,
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppConstants.kDarkBackground : AppConstants.kSurface,
+        border: Border(
+          top: BorderSide(
+            color: isDarkMode ? AppConstants.kDarkBorder : AppConstants.kBorder,
+          ),
+        ),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -141,10 +148,11 @@ class _MessageInputState extends State<MessageInput>
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               decoration: BoxDecoration(
-                color: isDarkMode
-                    ? const Color.fromARGB(80, 31, 41, 55)
-                    : Colors.grey[200],
+                color: isDarkMode ? AppConstants.kDarkSurface : AppConstants.kInputFill,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDarkMode ? AppConstants.kDarkBorder : AppConstants.kBorder,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -197,16 +205,17 @@ class _MessageInputState extends State<MessageInput>
               IconButton(
                 onPressed: _toggleButtons,
                 icon: Icon(
-                  Icons.add,
-                  color: isDarkMode ? Colors.white : Colors.black,
+                  Icons.add_rounded,
+                  color: isDarkMode ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: isDarkMode
-                      ? const Color.fromARGB(57, 35, 35, 35)
-                      : Colors.grey[200],
+                  backgroundColor: isDarkMode ? AppConstants.kDarkSurface : AppConstants.kInputFill,
                   minimumSize: const Size(40, 40),
-                  shape: const CircleBorder(),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: EdgeInsets.zero,
+                  side: BorderSide(
+                    color: isDarkMode ? AppConstants.kDarkBorder : AppConstants.kBorder,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -221,34 +230,39 @@ class _MessageInputState extends State<MessageInput>
                     color: isDarkMode ? Colors.white : Colors.black,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Ask anything',
+                    hintText: 'Mesajınızı yazın…',
                     hintStyle: TextStyle(
                       fontSize: 14,
-                      color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+                      color: isDarkMode ? AppConstants.kDarkTextSecondary : AppConstants.kTextSecondary,
                     ),
                     filled: true,
-                    fillColor: isDarkMode
-                        ? const Color.fromARGB(57, 35, 35, 35)
-                        : Colors.grey[200],
+                    fillColor: isDarkMode ? AppConstants.kDarkSurface : AppConstants.kInputFill,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                          AppConstants.defaultBorderRadius),
+                      borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 13),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? AppConstants.kDarkBorder : AppConstants.kBorder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+                      borderSide: const BorderSide(color: AppConstants.kPrimary, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     suffixIcon: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: IconButton(
                         onPressed: widget.onSend,
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.arrow_upward_rounded,
-                          color: isDarkMode ? Colors.black : Colors.white,
-                          size: 20,
+                          color: Colors.white,
+                          size: 18,
                         ),
                         style: IconButton.styleFrom(
-                          backgroundColor:
-                              isDarkMode ? Colors.white : Colors.grey[900],
+                          backgroundColor: AppConstants.kPrimary,
                           shape: const CircleBorder(),
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(32, 32),
@@ -316,11 +330,8 @@ class _MessageInputState extends State<MessageInput>
       ),
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        backgroundColor: isDarkMode
-            ? const Color.fromARGB(125, 35, 35, 35)
-            : Colors.grey[200],
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDarkMode ? AppConstants.kDarkSurface : AppConstants.kInputFill,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         minimumSize: Size.zero,
       ),

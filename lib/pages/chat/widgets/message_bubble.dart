@@ -112,11 +112,11 @@ class _MessageBubbleState extends State<MessageBubble>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isUser
-        ? const Color(0xFF2563EB)
-        : (isDarkMode ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB));
+        ? const Color(0xFF4361EE)
+        : (isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9));
 
     final textColor =
-        isUser ? Colors.white : (isDarkMode ? Colors.white : Colors.black87);
+        isUser ? Colors.white : (isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B));
 
     final bool showTextBubble =
         widget.message.isTyping || widget.message.text.isNotEmpty;
@@ -225,7 +225,7 @@ class _MessageBubbleState extends State<MessageBubble>
       constraints: const BoxConstraints(maxWidth: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+        color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
