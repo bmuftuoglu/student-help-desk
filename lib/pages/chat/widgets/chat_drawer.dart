@@ -94,17 +94,18 @@ class _ChatDrawerState extends State<ChatDrawer> {
   }
 
   Future<void> _renameSession(String sessionId, String currentTitle) async {
-    final controller = TextEditingController(text: currentTitle);
-    final newTitle = await showDialog<String>(
+    String draftTitle = currentTitle;
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: _isDark ? AppConstants.kDarkSurface : AppConstants.kSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Sohbeti Yeniden Adlandır',
             style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: controller,
+        content: TextFormField(
+          initialValue: currentTitle,
           autofocus: true,
+          onChanged: (v) => draftTitle = v,
           style: TextStyle(fontSize: 14, color: _text),
           decoration: InputDecoration(
             hintText: 'Yeni başlık',
@@ -128,11 +129,11 @@ class _ChatDrawerState extends State<ChatDrawer> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text('Vazgeç', style: TextStyle(color: _subText)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
               'Kaydet',
               style: TextStyle(color: AppConstants.kPrimary, fontWeight: FontWeight.w600),
@@ -141,12 +142,11 @@ class _ChatDrawerState extends State<ChatDrawer> {
         ],
       ),
     );
-    controller.dispose();
-    if (newTitle == null || newTitle.isEmpty) return;
+    if (confirmed != true || draftTitle.trim().isEmpty) return;
     if (!mounted) return;
     try {
-      await _chatService.updateSessionTitle(sessionId, newTitle);
-      if (mounted) widget.onSessionRenamed(sessionId, newTitle);
+      await _chatService.updateSessionTitle(sessionId, draftTitle.trim());
+      if (mounted) widget.onSessionRenamed(sessionId, draftTitle.trim());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
