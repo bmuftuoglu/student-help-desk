@@ -25,10 +25,12 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.system;
   final _authService = AuthService();
+  late final Stream<User?> _authStream;
 
   @override
   void initState() {
     super.initState();
+    _authStream = _authService.authStateChanges;
     _loadTheme();
   }
 
@@ -61,7 +63,7 @@ class _MyAppState extends State<MyApp> {
       themeMode: _themeMode,
       debugShowCheckedModeBanner: false,
       home: StreamBuilder<User?>(
-        stream: _authService.authStateChanges,
+        stream: _authStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(

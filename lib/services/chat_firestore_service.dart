@@ -37,7 +37,6 @@ class ChatFirestoreService {
     return docRef.id;
   }
 
-  // Sadece gerçek session'ları döner — placeholder yok çünkü artık oluşturulmuyor.
   Stream<QuerySnapshot<Map<String, dynamic>>> sessionsStream() {
     return _sessionsCol.orderBy('updatedAt', descending: true).snapshots();
   }
@@ -49,12 +48,16 @@ class ChatFirestoreService {
       final isUser = (data['role'] == 'user');
       final content = data['content'] as String? ?? '';
       final ts = data['createdAt'] as Timestamp?;
-      final imagePath = data['imagePath'] as String?;
+      final fileUrl  = data['fileUrl']  as String?;
+      final fileName = data['fileName'] as String?;
+      final mimeType = data['mimeType'] as String?;
       return ChatMessage(
         text: content,
         isUser: isUser,
         timestamp: ts?.toDate() ?? DateTime.now(),
-        imagePath: imagePath,
+        fileUrl: fileUrl,
+        fileName: fileName,
+        mimeType: mimeType,
       );
     }).toList();
   }
@@ -66,11 +69,12 @@ class ChatFirestoreService {
     await _messagesCol(sessionId).add({
       'role': 'user',
       'content': message.text,
-      'imagePath': message.imagePath,
+      'fileUrl': message.fileUrl,
+      'fileName': message.fileName,
+      'mimeType': message.mimeType,
       'createdAt': Timestamp.fromDate(message.timestamp),
     });
 
-    // Sadece metin varsa questionHistory'ye kaydet — boş prompt oluşmasın.
     if (message.text.isNotEmpty) {
       await _questionHistoryCol.add({
         'prompt': message.text,
@@ -87,7 +91,9 @@ class ChatFirestoreService {
     await _messagesCol(sessionId).add({
       'role': 'assistant',
       'content': message.text,
-      'imagePath': message.imagePath,
+      'fileUrl': message.fileUrl,
+      'fileName': message.fileName,
+      'mimeType': message.mimeType,
       'createdAt': Timestamp.fromDate(message.timestamp),
     });
   }
@@ -109,7 +115,6 @@ class ChatFirestoreService {
     await _sessionsCol.doc(sessionId).update(updateData);
   }
 
-  // WriteBatch ile N+1 Firestore isteği yerine tek commit'te siler.
   Future<void> deleteSession(String sessionId) async {
     final sessionRef = _sessionsCol.doc(sessionId);
     final messagesSnap = await sessionRef.collection('messages').get();

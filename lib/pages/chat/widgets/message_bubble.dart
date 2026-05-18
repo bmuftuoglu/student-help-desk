@@ -1,6 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../models/chat_message.dart';
 
 class MessageBubble extends StatefulWidget {
@@ -44,6 +46,66 @@ class _MessageBubbleState extends State<MessageBubble>
     super.dispose();
   }
 
+  void _openFullscreen(BuildContext context) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, animation, _) => FadeTransition(
+          opacity: animation,
+          child: _FullscreenImageViewer(url: widget.message.fileUrl!),
+        ),
+      ),
+    );
+  }
+
+  void _showImageOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.download_rounded),
+              title: const Text('Cihaza İndir'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _downloadImage(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadImage(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final response =
+          await http.get(Uri.parse(widget.message.fileUrl!)).timeout(
+                const Duration(seconds: 30),
+              );
+      await Gal.putImageBytes(response.bodyBytes);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Fotoğraf galeriye kaydedildi.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('İndirme hatası: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUser = widget.message.isUser;
@@ -69,45 +131,61 @@ class _MessageBubbleState extends State<MessageBubble>
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (widget.message.hasImage)
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: isUser
-                      ? const Radius.circular(16)
-                      : const Radius.circular(4),
-                  bottomRight: isUser
-                      ? const Radius.circular(4)
-                      : const Radius.circular(16),
-                ),
-                child: Image.file(
-                  File(widget.message.imagePath!),
-                  width: 250,
-                  height: 250,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 250,
-                      height: 100,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.broken_image, size: 40),
-                            SizedBox(height: 4),
-                            Text('Görsel yüklenemedi',
-                                style: TextStyle(fontSize: 12)),
-                          ],
+              GestureDetector(
+                onTap: () => _openFullscreen(context),
+                onLongPress: () => _showImageOptions(context),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: isUser
+                        ? const Radius.circular(16)
+                        : const Radius.circular(4),
+                    bottomRight: isUser
+                        ? const Radius.circular(4)
+                        : const Radius.circular(16),
+                  ),
+                  child: Image.network(
+                    widget.message.fileUrl!,
+                    width: 250,
+                    height: 250,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        width: 250,
+                        height: 250,
+                        color: Colors.grey[300],
+                        child: const Center(
+                            child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 250,
+                        height: 100,
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.broken_image, size: 40),
+                              SizedBox(height: 4),
+                              Text('Görsel yüklenemedi',
+                                  style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
+              )
+            else if (widget.message.hasFile)
+              _buildFileCard(isDarkMode),
             if (showTextBubble)
               Container(
-                margin: widget.message.hasImage
+                margin: widget.message.hasFile
                     ? const EdgeInsets.only(top: 4)
                     : EdgeInsets.zero,
                 padding:
@@ -136,6 +214,96 @@ class _MessageBubbleState extends State<MessageBubble>
         ),
       ),
     );
+  }
+
+  Widget _buildFileCard(bool isDarkMode) {
+    final mimeType = widget.message.mimeType ?? '';
+    final fileName = widget.message.fileName ?? 'Dosya';
+    final fileUrl = widget.message.fileUrl!;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _fileIcon(mimeType),
+            color: _fileIconColor(mimeType),
+            size: 32,
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fileName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () => _openFile(fileUrl),
+                  child: Text(
+                    'Aç',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[400],
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openFile(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  IconData _fileIcon(String mimeType) {
+    if (mimeType.contains('pdf')) return Icons.picture_as_pdf;
+    if (mimeType.contains('word') || mimeType.contains('msword')) {
+      return Icons.description;
+    }
+    if (mimeType.contains('excel') || mimeType.contains('spreadsheet')) {
+      return Icons.table_chart;
+    }
+    if (mimeType.contains('presentation') || mimeType.contains('powerpoint')) {
+      return Icons.slideshow;
+    }
+    return Icons.insert_drive_file;
+  }
+
+  Color _fileIconColor(String mimeType) {
+    if (mimeType.contains('pdf')) return Colors.red;
+    if (mimeType.contains('word') || mimeType.contains('msword')) {
+      return Colors.blue;
+    }
+    if (mimeType.contains('excel') || mimeType.contains('spreadsheet')) {
+      return Colors.green;
+    }
+    if (mimeType.contains('presentation') || mimeType.contains('powerpoint')) {
+      return Colors.orange;
+    }
+    return Colors.grey;
   }
 
   Widget _buildTypingDots(Color color) {
@@ -168,6 +336,108 @@ class _MessageBubbleState extends State<MessageBubble>
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.7),
           shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _FullscreenImageViewer extends StatefulWidget {
+  final String url;
+
+  const _FullscreenImageViewer({required this.url});
+
+  @override
+  State<_FullscreenImageViewer> createState() => _FullscreenImageViewerState();
+}
+
+class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
+    with SingleTickerProviderStateMixin {
+  late final TransformationController _transformController;
+  late final AnimationController _animController;
+  VoidCallback? _animTick;
+  CurvedAnimation? _curved;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformController = TransformationController();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+  }
+
+  @override
+  void dispose() {
+    if (_animTick != null) _animController.removeListener(_animTick!);
+    _curved?.dispose();
+    _transformController.dispose();
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _onInteractionStart(ScaleStartDetails _) {
+    _animController.stop();
+    if (_animTick != null) {
+      _animController.removeListener(_animTick!);
+      _animTick = null;
+    }
+    _curved?.dispose();
+    _curved = null;
+  }
+
+  void _onInteractionEnd(ScaleEndDetails _) {
+    final begin = _transformController.value.clone();
+    _curved = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    );
+    final tween = Matrix4Tween(begin: begin, end: Matrix4.identity());
+    _animTick = () => _transformController.value = tween.evaluate(_curved!);
+
+    _animController.reset();
+    _animController.addListener(_animTick!);
+    _animController.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black.withValues(alpha: 0.88),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          transformationController: _transformController,
+          onInteractionStart: _onInteractionStart,
+          onInteractionEnd: _onInteractionEnd,
+          minScale: 0.5,
+          maxScale: 6.0,
+          child: Image.network(
+            widget.url,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            },
+            errorBuilder: (context, error, _) => const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.broken_image, color: Colors.white54, size: 64),
+                  SizedBox(height: 8),
+                  Text('Görsel yüklenemedi',
+                      style: TextStyle(color: Colors.white54)),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

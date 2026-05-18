@@ -7,7 +7,10 @@ class MessageInput extends StatefulWidget {
   final VoidCallback onSend;
   final VoidCallback? onCameraTap;
   final VoidCallback? onGalleryTap;
-  final String? attachedImagePath;
+  final VoidCallback? onFileTap;
+  final String? attachedFilePath;
+  final String? attachedFileName;
+  final String? attachedMimeType;
   final VoidCallback? onRemoveAttachment;
 
   const MessageInput({
@@ -16,7 +19,10 @@ class MessageInput extends StatefulWidget {
     required this.onSend,
     this.onCameraTap,
     this.onGalleryTap,
-    this.attachedImagePath,
+    this.onFileTap,
+    this.attachedFilePath,
+    this.attachedFileName,
+    this.attachedMimeType,
     this.onRemoveAttachment,
   });
 
@@ -67,11 +73,15 @@ class _MessageInputState extends State<MessageInput>
     }
   }
 
+  bool get _hasAttachment =>
+      widget.attachedFilePath != null && widget.attachedFilePath!.isNotEmpty;
+
+  bool get _isImage =>
+      widget.attachedMimeType?.startsWith('image/') ?? false;
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final hasAttachment = widget.attachedImagePath != null &&
-        widget.attachedImagePath!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -111,16 +121,25 @@ class _MessageInputState extends State<MessageInput>
                           _toggleButtons();
                         },
                       ),
+                      const SizedBox(width: 8),
+                      _menuButton(
+                        icon: Icons.attach_file,
+                        label: 'Dosya',
+                        isDarkMode: isDarkMode,
+                        onTap: () {
+                          widget.onFileTap?.call();
+                          _toggleButtons();
+                        },
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-          if (hasAttachment)
+          if (_hasAttachment)
             Container(
               margin: const EdgeInsets.only(bottom: 8),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               decoration: BoxDecoration(
                 color: isDarkMode
                     ? const Color.fromARGB(80, 31, 41, 55)
@@ -130,18 +149,40 @@ class _MessageInputState extends State<MessageInput>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(widget.attachedImagePath!),
+                  if (_isImage)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(widget.attachedFilePath!),
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  else
+                    Container(
                       width: 56,
                       height: 56,
-                      fit: BoxFit.cover,
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Colors.grey[800]
+                            : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _fileIcon(widget.attachedMimeType),
+                        size: 28,
+                        color: _fileIconColor(widget.attachedMimeType),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      widget.attachedFileName ?? '1 dosya eklendi',
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Text('1 fotoğraf eklendi',
-                      style: TextStyle(fontSize: 12)),
                   const SizedBox(width: 4),
                   IconButton(
                     onPressed: widget.onRemoveAttachment,
@@ -223,6 +264,36 @@ class _MessageInputState extends State<MessageInput>
         ],
       ),
     );
+  }
+
+  IconData _fileIcon(String? mimeType) {
+    if (mimeType == null) return Icons.insert_drive_file;
+    if (mimeType.contains('pdf')) return Icons.picture_as_pdf;
+    if (mimeType.contains('word') || mimeType.contains('msword')) {
+      return Icons.description;
+    }
+    if (mimeType.contains('excel') || mimeType.contains('spreadsheet')) {
+      return Icons.table_chart;
+    }
+    if (mimeType.contains('presentation') || mimeType.contains('powerpoint')) {
+      return Icons.slideshow;
+    }
+    return Icons.insert_drive_file;
+  }
+
+  Color _fileIconColor(String? mimeType) {
+    if (mimeType == null) return Colors.grey;
+    if (mimeType.contains('pdf')) return Colors.red;
+    if (mimeType.contains('word') || mimeType.contains('msword')) {
+      return Colors.blue;
+    }
+    if (mimeType.contains('excel') || mimeType.contains('spreadsheet')) {
+      return Colors.green;
+    }
+    if (mimeType.contains('presentation') || mimeType.contains('powerpoint')) {
+      return Colors.orange;
+    }
+    return Colors.grey;
   }
 
   Widget _menuButton({

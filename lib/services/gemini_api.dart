@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -11,7 +10,6 @@ class GeminiApi {
   static const String _endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models';
 
-  // [history] zaten son kullanıcı mesajını içeriyor — ayrı parametre gerekmiyor.
   Future<String> generateReply({
     required List<ChatMessage> history,
   }) async {
@@ -81,31 +79,40 @@ class GeminiApi {
       parts.add({'text': text});
     }
 
-    if (msg.imagePath != null && msg.imagePath!.isNotEmpty) {
-      try {
-        final file = File(msg.imagePath!);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
+    if (msg.hasFile && msg.fileUrl != null) {
+      final mime = msg.mimeType ?? '';
+      final isGeminiSupported =
+          mime.startsWith('image/') || mime == 'application/pdf';
+
+      if (isGeminiSupported) {
+        try {
+          final response = await http
+              .get(Uri.parse(msg.fileUrl!))
+              .timeout(const Duration(seconds: 30));
+          if (response.statusCode == 200) {
+            parts.add({
+              'inline_data': {
+                'mime_type': mime.isNotEmpty ? mime : 'application/octet-stream',
+                'data': base64Encode(response.bodyBytes),
+              },
+            });
+          }
+        } catch (_) {
+          // İndirilemezse metin bağlamı gönderilir.
           parts.add({
-            'inline_data': {
-              'mime_type': _detectMimeType(msg.imagePath!),
-              'data': base64Encode(bytes),
-            },
+            'text': '[Dosya yüklenemedi: ${msg.fileName ?? 'dosya'}]',
           });
         }
-      } catch (_) {
-        // Görsel okunamazsa yalnızca metin gönderilir.
+      } else {
+        // Word, Excel, PowerPoint vb. Gemini tarafından desteklenmiyor.
+        parts.add({
+          'text':
+              '[Kullanıcı bir dosya paylaştı: ${msg.fileName ?? 'dosya'} — '
+              'bu format Gemini tarafından analiz edilemiyor]',
+        });
       }
     }
 
     return parts;
-  }
-
-  String _detectMimeType(String path) {
-    final lower = path.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
-    return 'image/jpeg';
   }
 }

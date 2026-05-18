@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mime/mime.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../models/chat_message.dart';
 import '../../constants/app_constants.dart';
@@ -12,7 +15,7 @@ import 'widgets/message_input.dart';
 import 'widgets/chat_drawer.dart';
 import '../../services/gemini_api.dart';
 import '../../services/chat_firestore_service.dart';
-import '../../services/local_storage_service.dart';
+import '../../services/s3_storage_service.dart';
 import '../profile/profile_page.dart';
 
 class ChatPage extends StatefulWidget {
@@ -35,14 +38,17 @@ class _ChatPageState extends State<ChatPage> {
 
   final GeminiApi _geminiApi = GeminiApi();
   final ChatFirestoreService _chatService = ChatFirestoreService();
-  final LocalStorageService _localStorageService = LocalStorageService();
+  final S3StorageService _s3Service = S3StorageService();
   final ImagePicker _picker = ImagePicker();
 
   bool _isSending = false;
   bool _isOffline = false;
   String? _currentSessionId;
   String _currentSessionTitle = 'Yeni sohbet';
-  String? _pendingImagePath;
+
+  String? _pendingFilePath;
+  String? _pendingFileName;
+  String? _pendingMimeType;
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
@@ -97,8 +103,8 @@ class _ChatPageState extends State<ChatPage> {
       builder: (context) => AlertDialog(
         title: const Text('İzin Gerekli'),
         content: const Text(
-          'Fotoğraf çekmek ve galeriden görsel seçebilmek için '
-          'kamera ve galeri iznine ihtiyaç duyulmaktadır.',
+          'Fotoğraf çekmek, galeriden görsel seçmek ve dosya eklemek için '
+          'kamera ve depolama iznine ihtiyaç duyulmaktadır.',
         ),
         actions: [
           TextButton(
@@ -114,7 +120,7 @@ class _ChatPageState extends State<ChatPage> {
     );
 
     if (proceed == true) {
-      await [Permission.camera, Permission.photos].request();
+      await [Permission.camera, Permission.photos, Permission.storage].request();
     }
   }
 
@@ -137,17 +143,18 @@ class _ChatPageState extends State<ChatPage> {
       _messages
         ..clear()
         ..addAll(msgs);
-      _pendingImagePath = null;
+      _pendingFilePath = null;
+      _pendingFileName = null;
+      _pendingMimeType = null;
       _messageController.clear();
     });
   }
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    final hasImage =
-        _pendingImagePath != null && _pendingImagePath!.isNotEmpty;
+    final hasFile = _pendingFilePath != null && _pendingFilePath!.isNotEmpty;
 
-    if ((!hasImage && text.isEmpty) || _isSending) return;
+    if ((!hasFile && text.isEmpty) || _isSending) return;
 
     if (_isOffline) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,7 +165,6 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
-    // _isSending'i hemen true yap — double-send'i önler.
     setState(() => _isSending = true);
     _messageController.clear();
 
@@ -168,25 +174,36 @@ class _ChatPageState extends State<ChatPage> {
         if (!mounted) return;
       }
       final sessionId = _currentSessionId!;
+      final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      String? savedImagePath;
-      if (hasImage) {
-        savedImagePath = await _localStorageService.saveImageToSession(
-          imagePath: _pendingImagePath!,
-          sessionId: sessionId,
+      String? uploadedFileUrl;
+      String? uploadedFileName;
+      String? uploadedMimeType;
+
+      if (hasFile) {
+        uploadedFileName = _pendingFileName;
+        uploadedMimeType = _pendingMimeType;
+        uploadedFileUrl = await _s3Service.uploadFile(
+          localPath: _pendingFilePath!,
+          uid: uid,
+          fileName: _pendingFileName!,
         );
       }
 
       final userMessage = ChatMessage(
         text: text,
-        imagePath: savedImagePath,
+        fileUrl: uploadedFileUrl,
+        fileName: uploadedFileName,
+        mimeType: uploadedMimeType,
         isUser: true,
         timestamp: DateTime.now(),
       );
 
       setState(() {
         _messages.add(userMessage);
-        _pendingImagePath = null;
+        _pendingFilePath = null;
+        _pendingFileName = null;
+        _pendingMimeType = null;
       });
 
       await _chatService.saveUserMessage(
@@ -198,7 +215,7 @@ class _ChatPageState extends State<ChatPage> {
       if (_currentSessionTitle == 'Yeni sohbet') {
         titleOverride = text.isNotEmpty
             ? (text.length > 30 ? '${text.substring(0, 30)}...' : text)
-            : 'Görsel';
+            : (uploadedFileName ?? 'Dosya');
       }
 
       final typingMessage = ChatMessage(
@@ -248,7 +265,6 @@ class _ChatPageState extends State<ChatPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      // Hata durumunda typing balonunu kaldır.
       setState(() => _messages.removeWhere((m) => m.isTyping));
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Hata: $e')));
@@ -278,7 +294,6 @@ class _ChatPageState extends State<ChatPage> {
     return false;
   }
 
-  // Permission.photos Android 13+'de READ_MEDIA_IMAGES'a, eskisinde READ_EXTERNAL_STORAGE'a map edilir.
   Future<bool> _ensureGalleryPermission() async {
     var status = await Permission.photos.status;
     if (status.isGranted) return true;
@@ -338,7 +353,14 @@ class _ChatPageState extends State<ChatPage> {
         imageQuality: 80,
       );
       if (picked == null) return;
-      if (mounted) setState(() => _pendingImagePath = picked.path);
+      final mime = lookupMimeType(picked.path) ?? 'image/jpeg';
+      if (mounted) {
+        setState(() {
+          _pendingFilePath = picked.path;
+          _pendingFileName = picked.name;
+          _pendingMimeType = mime;
+        });
+      }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Kamera hatası: $e')));
     }
@@ -353,10 +375,50 @@ class _ChatPageState extends State<ChatPage> {
         imageQuality: 80,
       );
       if (picked == null) return;
-      if (mounted) setState(() => _pendingImagePath = picked.path);
+      final mime = lookupMimeType(picked.path) ?? 'image/jpeg';
+      if (mounted) {
+        setState(() {
+          _pendingFilePath = picked.path;
+          _pendingFileName = picked.name;
+          _pendingMimeType = mime;
+        });
+      }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Galeri hatası: $e')));
     }
+  }
+
+  Future<void> _pickFile() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+        ],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.path == null) return;
+      final mime = lookupMimeType(file.path!) ?? 'application/octet-stream';
+      if (mounted) {
+        setState(() {
+          _pendingFilePath = file.path;
+          _pendingFileName = file.name;
+          _pendingMimeType = mime;
+        });
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Dosya seçme hatası: $e')));
+    }
+  }
+
+  void _clearAttachment() {
+    setState(() {
+      _pendingFilePath = null;
+      _pendingFileName = null;
+      _pendingMimeType = null;
+    });
   }
 
   @override
@@ -386,8 +448,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
         actions: [
           IconButton(
-            icon:
-                Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
             onPressed: widget.onThemeToggle,
             tooltip: 'Tema değiştir',
           ),
@@ -412,13 +473,14 @@ class _ChatPageState extends State<ChatPage> {
           if (context.mounted) Navigator.pop(context);
         },
         onSessionDeleted: (sessionId) async {
-          await _localStorageService.deleteSessionFolder(sessionId);
           if (_currentSessionId == sessionId) {
             setState(() {
               _currentSessionId = null;
               _currentSessionTitle = 'Yeni sohbet';
               _messages.clear();
-              _pendingImagePath = null;
+              _pendingFilePath = null;
+              _pendingFileName = null;
+              _pendingMimeType = null;
               _messageController.clear();
             });
           }
@@ -461,9 +523,11 @@ class _ChatPageState extends State<ChatPage> {
             onSend: _sendMessage,
             onCameraTap: _pickFromCamera,
             onGalleryTap: _pickFromGallery,
-            attachedImagePath: _pendingImagePath,
-            onRemoveAttachment: () =>
-                setState(() => _pendingImagePath = null),
+            onFileTap: _pickFile,
+            attachedFilePath: _pendingFilePath,
+            attachedFileName: _pendingFileName,
+            attachedMimeType: _pendingMimeType,
+            onRemoveAttachment: _clearAttachment,
           ),
         ],
       ),
