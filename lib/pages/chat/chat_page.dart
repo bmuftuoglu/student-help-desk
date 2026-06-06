@@ -227,30 +227,84 @@ class _ChatPageState extends State<ChatPage> {
         isTyping: true,
         timestamp: DateTime.now(),
       );
-
       setState(() => _messages.add(typingMessage));
+      final streamingIndex = _messages.length - 1;
 
-      final reply = await _geminiApi.generateReply(
-        history: _messages.where((m) => !m.isTyping).toList(),
-      );
+      final pendingBuffer = StringBuffer();
+      var streamDone = false;
+      var displayedText = '';
+      final aiTimestamp = DateTime.now();
+      final typewriterDone = Completer<void>();
+      Timer? typewriterTimer;
 
-      if (!mounted) return;
-
-      final aiMessage = ChatMessage(
-        text: reply,
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-      setState(() {
-        final index = _messages.indexOf(typingMessage);
-        if (index != -1) {
-          _messages[index] = aiMessage;
-        } else {
-          _messages.add(aiMessage);
+      typewriterTimer = Timer.periodic(const Duration(milliseconds: 16), (t) {
+        if (!mounted) {
+          t.cancel();
+          if (!typewriterDone.isCompleted) typewriterDone.complete();
+          return;
         }
+        final pending = pendingBuffer.toString();
+        if (pending.isEmpty) {
+          if (streamDone) {
+            t.cancel();
+            if (!typewriterDone.isCompleted) typewriterDone.complete();
+          }
+          return;
+        }
+        // Buffer büyükse hızlı tüket, küçükse yavaş typewriter hissi ver
+        final take = (pending.length > 80 ? 8 : 3).clamp(1, pending.length);
+        displayedText += pending.substring(0, take);
+        pendingBuffer.clear();
+        if (take < pending.length) pendingBuffer.write(pending.substring(take));
+        setState(() {
+          _messages[streamingIndex] = ChatMessage(
+            text: displayedText,
+            isUser: false,
+            timestamp: aiTimestamp,
+          );
+        });
       });
 
       try {
+        await for (final chunk in _geminiApi.generateReplyStream(
+          history: _messages.where((m) => !m.isTyping).toList(),
+        )) {
+          if (!mounted) {
+            typewriterTimer.cancel();
+            return;
+          }
+          pendingBuffer.write(chunk);
+        }
+        streamDone = true;
+        if (pendingBuffer.isEmpty && !typewriterDone.isCompleted) {
+          typewriterTimer.cancel();
+          typewriterDone.complete();
+        }
+        await typewriterDone.future;
+      } catch (e) {
+        typewriterTimer.cancel();
+        rethrow;
+      }
+
+      if (!mounted) return;
+
+      final reply = displayedText;
+      if (reply.isEmpty) {
+        setState(() {
+          if (streamingIndex < _messages.length) {
+            _messages.removeAt(streamingIndex);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yanıt güvenlik filtresi tarafından engellendi.'),
+          ),
+        );
+        return;
+      }
+
+      try {
+        final aiMessage = _messages[streamingIndex];
         await _chatService.saveAssistantMessage(
           sessionId: sessionId,
           message: aiMessage,

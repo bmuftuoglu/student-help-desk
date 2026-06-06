@@ -20,6 +20,10 @@ A Flutter mobile application that acts as an AI-powered study assistant for stud
 | | Feature | Description |
 |---|---|---|
 | 🤖 | **AI Conversations** | Chat with Gemini 2.5 Flash for academic help in Turkish or English |
+| 🎓 | **Pedagogical Guidance** | AI guides students to find answers themselves instead of solving directly |
+| 📚 | **Subject Filtering** | Responds only to middle-school curriculum topics; politely declines off-topic messages |
+| ⚡ | **Streaming Responses** | AI reply streams character-by-character with a smooth typewriter effect |
+| ✍️ | **Markdown Rendering** | Bold, italic, headers, lists and code blocks rendered properly in chat |
 | 📷 | **Image Analysis** | Share photos from camera or gallery — Gemini reads and analyzes them |
 | 📄 | **PDF Support** | Upload PDFs and Gemini will analyze the actual content |
 | 💬 | **Cross-Device History** | All chats stored in Firestore, accessible from any device |
@@ -66,7 +70,8 @@ A Flutter mobile application that acts as an AI-powered study assistant for stud
 │     │                                       │
 │     └──► GeminiApi                          │
 │               http.get(fileUrl) → base64    │
-│               POST to Gemini 2.5 Flash      │
+│               streamGenerateContent (SSE)   │
+│               chunk → typewriter buffer     │
 └─────────────────────────────────────────────┘
 ```
 
@@ -141,7 +146,7 @@ lib/
 ├── services/
 │   ├── auth_service.dart           # Firebase Auth wrapper
 │   ├── chat_firestore_service.dart # Firestore CRUD for sessions & messages
-│   ├── gemini_api.dart             # Gemini 2.5 Flash client (inline_data)
+│   ├── gemini_api.dart             # Gemini 2.5 Flash client — SSE streaming, inline_data
 │   └── s3_storage_service.dart     # MinIO upload & delete (AWS Sig V4)
 ├── theme/
 │   └── app_theme.dart              # Light & dark ThemeData
@@ -172,6 +177,8 @@ lib/
 | `url_launcher` | ^6.3.0 | Open files in external apps |
 | `gal` | ^1.1.0 | Save images to device gallery |
 | `mime` | ^1.0.0 | MIME type detection |
+| `flutter_markdown_plus` | ^1.0.7 | Markdown rendering in chat bubbles |
+| `cached_network_image` | ^3.3.0 | Network image caching |
 | `shared_preferences` | ^2.3.0 | Theme & permission state |
 | `path_provider` | ^2.1.0 | Local path resolution |
 

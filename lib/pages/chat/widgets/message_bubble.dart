@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -200,10 +201,51 @@ class _MessageBubbleState extends State<MessageBubble>
                 ),
                 child: widget.message.isTyping
                     ? _buildTypingDots(textColor)
-                    : Text(
-                        widget.message.text,
-                        style: TextStyle(color: textColor, fontSize: 15),
-                      ),
+                    : isUser
+                        ? Text(
+                            widget.message.text,
+                            style: TextStyle(color: textColor, fontSize: 15),
+                          )
+                        : MarkdownBody(
+                            data: widget.message.text,
+                            styleSheet: MarkdownStyleSheet(
+                              p: TextStyle(color: textColor, fontSize: 15),
+                              strong: TextStyle(
+                                color: textColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              em: TextStyle(
+                                color: textColor,
+                                fontSize: 15,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              listBullet:
+                                  TextStyle(color: textColor, fontSize: 15),
+                              code: TextStyle(
+                                color: textColor,
+                                fontSize: 13,
+                                fontFamily: 'monospace',
+                                backgroundColor: Colors.black12,
+                              ),
+                              h1: TextStyle(
+                                color: textColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              h2: TextStyle(
+                                color: textColor,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              h3: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            shrinkWrap: true,
+                          ),
               ),
           ],
         ),
