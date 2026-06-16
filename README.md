@@ -60,7 +60,9 @@ A Flutter mobile application that acts as an AI-powered study assistant for stud
 │                                             │
 │  ChatPage ──► S3StorageService              │
 │     │              │ fPutObject()           │
-│     │         MinIO (muftu-s3.armoyu.com)   │
+│     │         Cloudflare Tunnel (HTTPS)     │
+│     │              │                       │
+│     │         MinIO (self-hosted, Docker)   │
 │     │              │ returns URL            │
 │     │         URL stored in Firestore       │
 │     │                                       │
@@ -74,6 +76,8 @@ A Flutter mobile application that acts as an AI-powered study assistant for stud
 │               chunk → typewriter buffer     │
 └─────────────────────────────────────────────┘
 ```
+
+> MinIO runs in a self-hosted Docker container and is exposed to the internet via a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) — no static IP or port forwarding required.
 
 ---
 
