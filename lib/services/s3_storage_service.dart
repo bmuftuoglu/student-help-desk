@@ -22,8 +22,19 @@ class S3StorageService {
     required String sessionId,
     required String fileName,
   }) async {
-    final objectName = '$uid/$sessionId/${DateTime.now().microsecondsSinceEpoch}_$fileName';
-    await _minio.fPutObject(s3Bucket, objectName, localPath);
+    final objectName =
+        '$uid/$sessionId/${DateTime.now().microsecondsSinceEpoch}_$fileName';
+    try {
+      await _minio.fPutObject(s3Bucket, objectName, localPath);
+    } on MinioS3Error catch (e) {
+      final code = e.error?.code ?? 'bilinmiyor';
+      final msg = e.error?.message ?? '';
+      throw Exception('Depolama S3 hatası [$code]: $msg');
+    } on MinioError catch (e) {
+      throw Exception('Depolama bağlantı hatası: ${e.message}');
+    } catch (e) {
+      throw Exception('Dosya yükleme hatası: $e');
+    }
     return 'https://$s3Endpoint/$s3Bucket/$objectName';
   }
 
